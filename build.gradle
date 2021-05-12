@@ -1,9 +1,19 @@
 apply plugin: 'java'
-
-version = '1.0'
+apply plugin: 'com.bmuschko.nexus'
+apply plugin: 'net.researchgate.release'
 
 buildscript {
   ext.gae_version = '1.9.54'
+  repositories {
+    jcenter()
+    maven {
+      url 'https://plugins.gradle.org/m2/'
+    }
+  }
+  dependencies {
+    classpath 'com.bmuschko:gradle-nexus-plugin:2.3.1'
+    classpath 'net.researchgate:gradle-release:2.6.0'
+  }
 }
 
 repositories {
@@ -26,39 +36,62 @@ dependencies {
   testCompile "com.google.appengine:appengine-api-stubs:$gae_version", "com.google.appengine:appengine-testing:$gae_version"
 }
 
-task coreJar(type: Jar) {
-  baseName = "cufar-core"
-  from(sourceSets.main.output) {
-    exclude "com/clouway/cufar/gae/**"
+task jarTests(type: Jar) {
+  classifier = 'tests'
+  from sourceSets.test.output
+}
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+version = '1.0'
+group = 'com.clouway.util'
+
+modifyPom {
+  project {
+    name 'cufar'
+    description 'cufar'
+    url 'https://github.com/clouway/cufar'
+    inceptionYear '2016'
+
+    scm {
+      url 'https://github.com/clouway/cufar'
+      connection 'scm:https://clouway@github.com/clouway/cufar.git'
+      developerConnection 'scm:git://github.com/clouway/cufar.git'
+    }
+
+    licenses {
+      license {
+        name 'The Apache Software License, Version 2.0'
+        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+        distribution 'repo'
+      }
+    }
+
+    developers {
+      developer {
+        id 'telcong'
+        name 'Telcong Bot'
+        email 'telcong@clouway.com'
+      }
+    }
   }
 }
 
-task coreJarSources(type: Jar, dependsOn: classes) {
-  baseName = "cufar-core-sources"
-  from(sourceSets.main.allSource) {
-    exclude "com/clouway/cufar/gae/**"
+extraArchive {
+  sources = true
+  tests = false
+  javadoc = true
+}
+
+nexus {
+  sign = true
+  repositoryUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+  snapshotRepositoryUrl = 'https://oss.sonatype.org/content/repositories/snapshots'
+}
+
+allprojects {
+  tasks.withType(Javadoc) {
+    options.addStringOption('Xdoclint:none', '-quiet')
   }
 }
-
-task gaeJar(type: Jar) {
-  baseName = "cufar-gae-connector"
-  from(sourceSets.main.output) {
-    include "com/clouway/cufar/gae/**"
-  }
-}
-
-task gaeJarSources(type: Jar, dependsOn: classes) {
-  baseName = "cufar-gae-connector-sources"
-  from(sourceSets.main.allSource) {
-    include "com/clouway/cufar/gae/**"
-  }
-}
-
-artifacts {
-  archives coreJar
-  archives coreJarSources
-  archives gaeJar
-  archives gaeJarSources
-}
-
-task allJars(dependsOn: [coreJar, coreJarSources, gaeJar, gaeJarSources])
